@@ -1,4 +1,4 @@
 [csslab]
-csslab23
+cssansiblelab
 cssansiblelab1
 cssansiblelab2
