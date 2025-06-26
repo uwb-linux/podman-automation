@@ -1,0 +1,11 @@
+---
+- name: Setup Podman Users, Directories, and Group
+  import_tasks: setup-podman-users.yml
+
+- name: Copy podman-users.sh to /etc/profile.d/
+  copy:
+    src: ../files/podman-users.sh
+    dest: /etc/profile.d/podman-users.sh
+    owner: root
+    group: root
+    mode: '0755'
