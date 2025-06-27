@@ -1,55 +1,26 @@
-#!/bin/bash
-# /etc/profile.d/podman-users.sh
+# /etc/profile.d/podman_lab.sh
 
-group="css-podman"
+# CONFIGURATION --- EDIT THESE AS NEEDED
+lab_group="css-podman"
+podman_basedir="/lab/podman-users"   # or /home if you want to use the normal homedir
+base_uid=200000
 map_size=65536
-base_uid=100000
-podman_basedir="/podman"
 
-# Batch-admin mode: run as root/admin with --batch to provision for all css-podman users
-if [[ $EUID -eq 0 && "$1" == "--batch" ]]; then
-  users=$(getent group "$group" | awk -F: '{print $4}' | tr ',' ' ')
-
-  # Find highest subuid used so far
-  last_uid=$(awk -F: '{print $2}' /etc/subuid | sort -n | tail -1)
-  if [ -z "$last_uid" ]; then
-    next_uid=$base_uid
-  else
-    next_uid=$((last_uid + map_size))
-  fi
-
-  for user in $users; do
-    # Subuid/subgid setup for each user
-    if ! grep -q "^$user:" /etc/subuid; then
-      echo "$user:$next_uid:$map_size" | tee -a /etc/subuid
-      echo "$user:$next_uid:$map_size" | tee -a /etc/subgid
-      echo "Provisioned mapping for $user"
-      next_uid=$((next_uid+map_size))
-    fi
-    # Podman directories
-    if [ ! -d "$podman_basedir/$user" ]; then
-      mkdir -p "$podman_basedir/$user/run"
-    fi
-    chown -R "$user:$user" "$podman_basedir/$user"
-    chmod 700 "$podman_basedir/$user"
-    chmod 755 "$podman_basedir/$user/run"
-    echo "Set directories for $user"
-  done
-
-  exit 0
-fi
-
-# Per-user login logic (profile.d)
-user=$(whoami)
+# Only run in interactive shells
 [[ $- != *i* ]] && return
 
-if groups "$user" | grep -qw "$group"; then
+user=$(whoami)
+
+# Only perform setup if user is in group and not root
+if [ "$user" != "root" ] && id -nG "$user" | grep -qw "$lab_group"; then
+  # Ensure Podman base directories
   if [ ! -d "$podman_basedir/$user" ]; then
     mkdir -p "$podman_basedir/$user/run"
     chown "$user:$user" "$podman_basedir/$user" "$podman_basedir/$user/run"
     chmod 700 "$podman_basedir/$user"
   fi
 
+  # Ensure unique subuid/subgid mappings
   if ! grep -q "^$user:" /etc/subuid; then
     last_uid=$(awk -F: '{ print $2 }' /etc/subuid | sort -n | tail -1)
     if [ -z "$last_uid" ]; then
@@ -61,6 +32,7 @@ if groups "$user" | grep -qw "$group"; then
     echo "$user:$next_uid:$map_size" | sudo tee -a /etc/subgid >/dev/null
   fi
 
+  # Set home and runtime directory for Podman
   export HOME="$podman_basedir/$user"
   export XDG_RUNTIME_DIR="$podman_basedir/$user/run"
 fi
