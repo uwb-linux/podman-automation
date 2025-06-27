@@ -1,4 +1,0 @@
-[csslab]
-cssansiblelab
-cssansiblelab1
-cssansiblelab2
