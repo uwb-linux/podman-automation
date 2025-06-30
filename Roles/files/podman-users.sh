@@ -1,36 +1,38 @@
 #!/bin/bash
-# /etc/profile.d/podman-users.sh
+# Provision Podman rootless support for ALL users
+# Run as root!
 
-user=$(whoami)
+PODMAN_BASEDIR="/podman"
+RANGE=65536
+START=100000
+SUBUID_FILE="/etc/subuid"
+SUBGID_FILE="/etc/subgid"
 
-# Only run if we're in an interactive shell
-[[ $- != *i* ]] && return
-
-# Check if user is in css-podman group
-if groups "$user" | grep -qw "css-podman"; then
-
-    podman_basedir="/podman"
-
-    # Create user directory if it doesn't exist
-    if [ ! -d "$podman_basedir/$user" ]; then
-        mkdir -p "$podman_basedir/$user/run"
-        chmod 700 "$podman_basedir/$user"
+for user in $(awk -F: '($3 >= 1000 && $1 != "nobody") {print $1}' /etc/passwd); do
+    # 1. Podman directory
+    userdir="$PODMAN_BASEDIR/$user"
+    rundir="$userdir/run"
+    if [ ! -d "$rundir" ]; then
+        mkdir -p "$rundir"
+        chown "$user":"$user" "$userdir" "$rundir"
+        chmod 700 "$userdir"
+        echo "Ensured podman dir for $user"
     fi
 
-    # Namespace mapping: Check for existing range, otherwise assign a new one
-    if ! grep -q "^$user:" /etc/subuid; then
-        # Find the next available UID/GID chunk; each gets 65536 ids
-        last_uid=$(awk -F: '{ print $2 }' /etc/subuid | sort -n | tail -1)
-        if [ -z "$last_uid" ]; then
-            next_uid=100000
-        else
-            next_uid=$((last_uid + 65536))
-        fi
-        echo "$user:$next_uid:65536" | sudo tee -a /etc/subuid >/dev/null
-        echo "$user:$next_uid:65536" | sudo tee -a /etc/subgid >/dev/null
+    # 2. Provision /etc/subuid
+    if ! grep -q "^$user:" "$SUBUID_FILE"; then
+        lastuid=$(awk -F: '{print $2 + $3}' "$SUBUID_FILE" 2>/dev/null | sort -n | tail -1)
+        [ -z "$lastuid" ] && nextuid=$START || nextuid=$((lastuid))
+        echo "$user:$nextuid:$RANGE" >> "$SUBUID_FILE"
+        echo "Added $user:$nextuid:$RANGE to $SUBUID_FILE"
     fi
 
-    # Export environment for Podman to use local directory
-    export HOME="$podman_basedir/$user"
-    export XDG_RUNTIME_DIR="$podman_basedir/$user/run"
-fi
+    # 3. Provision /etc/subgid
+    if ! grep -q "^$user:" "$SUBGID_FILE"; then
+        lastgid=$(awk -F: '{print $2 + $3}' "$SUBGID_FILE" 2>/dev/null | sort -n | tail -1)
+        [ -z "$lastgid" ] && nextgid=$START || nextgid=$((lastgid))
+        echo "$user:$nextgid:$RANGE" >> "$SUBGID_FILE"
+        echo "Added $user:$nextgid:$RANGE to $SUBGID_FILE"
+    fi
+
+done
