@@ -1,4 +1,14 @@
 #!/bin/bash
+# Install Podman if it does not already exist
+set -e
+
+# Install Podman if missing, for Rocky Linux
+if ! command -v podman > /dev/null 2>&1; then
+  echo "Podman not found. Installing using yum..."
+  yum install -y podman
+else
+  echo "Podman already installed."
+fi
 
 GROUP="css-podman"
 BASE_UID=100000
