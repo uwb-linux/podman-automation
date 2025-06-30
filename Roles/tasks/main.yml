@@ -1,4 +1,14 @@
----
+- name: Set SELinux to permissive NOW (immediate, until reboot)
+  command: setenforce 0
+  become: yes
+  ignore_errors: yes
+
+- name: Make SELinux permissive permanently in /etc/selinux/config
+  replace:
+    path: /etc/selinux/config
+    regexp: '^SELINUX=.*'
+    replace: 'SELINUX=permissive'
+  become: yes
 - name: Setup Podman Users, Directories, and Group
   import_tasks: setup-podman-users.yml
 
