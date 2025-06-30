@@ -4,11 +4,6 @@ GROUP="css-podman"
 BASE_UID=100000
 RANGE_SIZE=65536
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Run as root!"
-  exit 1
-fi
-
 users=$(getent group "$GROUP" | awk -F: '{print $4}' | tr ',' ' ')
 if [ -z "$users" ]; then
   echo "No users found in group $GROUP"
