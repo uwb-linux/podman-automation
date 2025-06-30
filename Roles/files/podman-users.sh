@@ -1,5 +1,4 @@
 #!/bin/bash
-# /etc/profile.d/podman-users.sh
 
 user=$(whoami)
 
@@ -14,19 +13,19 @@ if groups "$user" | grep -qw "css-podman"; then
         chmod 700 "$podman_basedir/$user"
     fi
 
-    # Check/add subuid and subgid entries for this user
+    missing=0
     if ! grep -q "^$user:" /etc/subuid; then
-        last_uid=$(awk -F: '{ print $2 }' /etc/subuid | sort -n | tail -1)
-        if [ -z "$last_uid" ]; then
-            next_uid=100000
-        else
-            next_uid=$((last_uid + 65536))
-        fi
-        echo "$user:$next_uid:65536" | sudo tee -a /etc/subuid >/dev/null
-        echo "$user:$next_uid:65536" | sudo tee -a /etc/subgid >/dev/null
+        missing=1
+        echo "    echo \"$user:$(awk -F: '{ print $2 }' /etc/subuid | sort -n | tail -1)+65536:65536\" >> /etc/subuid"
+    fi
+    if ! grep -q "^$user:" /etc/subgid; then
+        missing=1
+       
+        echo "    echo \"$user:$(awk -F: '{ print $2 }' /etc/subgid | sort -n | tail -1)+65536:65536\" >> /etc/subgid"
     fi
 
-    # Export podman environment variables
-    export HOME="$podman_basedir/$user"
-    export XDG_RUNTIME_DIR="$podman_basedir/$user/run"
+    if [ "$missing" -eq 0 ]; then
+        export HOME="$podman_basedir/$user"
+        export XDG_RUNTIME_DIR="$podman_basedir/$user/run"
+    fi
 fi
