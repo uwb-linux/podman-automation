@@ -1,3 +1,4 @@
 [ansiblelab]
+lab0 ansible_ssh_host=cssansiblelab.uwb.edu
 lab1 ansible_ssh_host=cssansiblelab1.uwb.edu
 lab2 ansible_ssh_host=cssansiblelab2.uwb.edu
