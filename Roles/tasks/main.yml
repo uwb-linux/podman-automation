@@ -1,3 +1,9 @@
+- name: Ensure Podman is installed
+  dnf:
+    name: podman
+    state: present
+  become: yes
+  
 - name: Set SELinux to permissive NOW (immediate, until reboot)
   command: setenforce 0
   become: yes
