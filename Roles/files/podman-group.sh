@@ -1,11 +1,18 @@
 #!/bin/bash
+# /opt/podman/podman-group
 
-# /etc/profile.d/podman-users.sh
+# Get username - either from argument or current user
+if [ $# -eq 1 ]; then
+    user=$1
+else
+    user=$(whoami)
+fi
 
-user=$(whoami)
-
-# Only run if we're in an interactive shell and not during non-login
-[[ $- != *i* ]] && return
+# Check if user exists
+if ! id "$user" &>/dev/null; then
+    echo "User $user does not exist"
+    exit 1
+fi
 
 # Check if user is in css-podman group
 if groups "$user" | grep -qw "css-podman"; then
@@ -14,8 +21,9 @@ if groups "$user" | grep -qw "css-podman"; then
 
     # Create user directory if it doesn't exist
     if [ ! -d "$podman_basedir/$user" ]; then
-        mkdir -p "$podman_basedir/$user/run"
-        chmod 700 "$podman_basedir/$user"
+        sudo mkdir -p "$podman_basedir/$user/run"
+        sudo chown -R "$user:$user" "$podman_basedir/$user"
+        sudo chmod 700 "$podman_basedir/$user"
     fi
 
     # Namespace mapping: Check for existing range, otherwise assign a new one
@@ -31,8 +39,7 @@ if groups "$user" | grep -qw "css-podman"; then
         echo "$user:$next_uid:65536" | sudo tee -a /etc/subgid >/dev/null
     fi
 
-    # Export environment for Podman to use local directory
-    export HOME="$podman_basedir/$user"
-    export XDG_RUNTIME_DIR="$podman_basedir/$user/run"
-
+    echo "Podman setup complete for user: $user"
+else
+    echo "User $user is not a member of css-podman group"
 fi
