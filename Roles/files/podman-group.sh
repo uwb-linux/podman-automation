@@ -1,7 +1,7 @@
 #!/bin/bash
 # /opt/podman/podman-group
 
-# Get username - either from argument or current user
+# Get username
 if [ $# -eq 1 ]; then
     user=$1
 else
