@@ -15,13 +15,31 @@
     regexp: '^SELINUX=.*'
     replace: 'SELINUX=permissive'
   become: yes
-- name: Setup Podman Users, Directories, and Group
-  import_tasks: setup-podman-users.yml
 
-- name: Copy podman-users.sh to /etc/profile.d/
-  copy:
-    src: ../files/podman-users.sh
-    dest: /etc/profile.d/podman-users.sh
+- name: Create /opt/podman directory
+  file:
+    path: /opt/podman
+    state: directory
     owner: root
     group: root
     mode: '0755'
+  become: yes
+
+- name: Setup Podman Users, Directories, and Group
+  import_tasks: setup-podman-users.yml
+
+- name: Copy podman-group script to /opt/podman/
+  copy:
+    src: ../files/podman-group.sh
+    dest: /opt/podman/podman-group
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: Create alias for podman-group in /etc/bashrc
+  lineinfile:
+    path: /etc/bashrc
+    line: 'alias podman-group="/opt/podman/podman-group"'
+    state: present
+  become: yes
