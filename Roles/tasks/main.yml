@@ -30,12 +30,11 @@
 
 - name: Copy podman-group script to /opt/podman/
   copy:
-    src: ../files/podman-group.sh
+    src: Roles/files/podman-group.sh
     dest: /opt/podman/podman-group
     owner: root
     group: root
     mode: '0755'
-  become: yes
 
 - name: Create alias for podman-group in /etc/bashrc
   lineinfile:
