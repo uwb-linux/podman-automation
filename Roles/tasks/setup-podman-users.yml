@@ -4,13 +4,6 @@
     name: css-podman
     state: present
 
-- name: Ensure test user csstemp1 exists and in css-podman group
-  user:
-    name: csstemp1
-    groups: css-podman
-    append: yes
-    state: present
-
 - name: Ensure /podman directory exists with correct permissions
   file:
     path: /podman
