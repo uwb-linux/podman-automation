@@ -1,3 +1,11 @@
-[ansiblelab]
-lab1 ansible_ssh_host=cssansiblelab1.uwb.edu
-lab2 ansible_ssh_host=cssansiblelab2.uwb.edu
+[gpu_lab]
+gpulab01
+gpulab02
+gpulab03
+gpulab04
+gpulab05
+gpulab06
+gpulab07
+gpulab08
+gpulab09
+gpulab10
