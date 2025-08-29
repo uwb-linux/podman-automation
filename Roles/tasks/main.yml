@@ -3,7 +3,7 @@
     name: podman
     state: present
   become: yes
-  
+
 - name: Set SELinux to permissive NOW (immediate, until reboot)
   command: setenforce 0
   become: yes
@@ -29,22 +29,32 @@
   import_tasks: setup-podman-users.yml
   become: yes
 
-- name: Copy podman-group script to /opt/podman/
-  copy:
-    src: Roles/files/podman-group.sh
-    dest: /opt/podman/podman-group
-    owner: root
-    group: root
-    mode: '0755'
-    become: yes
-    
-- name: Run podman-group to ensure subuids/subgids
-  command: /opt/podman/podman-group
+- name: Get members of css-podman group
+  command: getent group css-podman
+  register: podman_group
+  changed_when: false
   become: yes
-  
-- name: Create alias for podman-group in /etc/bashrc
+
+- name: Extract css-podman users
+  set_fact:
+    podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
+
+- name: Ensure subuid ranges for css-podman users
   lineinfile:
-    path: /etc/bashrc
-    line: 'alias podman-group="/opt/podman/podman-group"'
-    state: present
+    path: /etc/subuid
+    regexp: "^{{ item }}:"
+    line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
+  loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
+  become: yes
+
+- name: Ensure subgid ranges for css-podman users
+  lineinfile:
+    path: /etc/subgid
+    regexp: "^{{ item }}:"
+    line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
+  loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
   become: yes
