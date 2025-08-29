@@ -1,3 +1,9 @@
+- hosts: gpulab_servers
+  become: true  
+  become_user: root
+  tasks:
+    - name: Run podman group script
+      script: /opt/podman/podman-group bachkev
 - name: Ensure Podman is installed
   dnf:
     name: podman
