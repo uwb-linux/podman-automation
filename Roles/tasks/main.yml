@@ -27,6 +27,7 @@
 
 - name: Setup Podman Users, Directories, and Group
   import_tasks: setup-podman-users.yml
+  become: yes
 
 - name: Copy podman-group script to /opt/podman/
   copy:
@@ -35,7 +36,12 @@
     owner: root
     group: root
     mode: '0755'
-
+    become: yes
+    
+- name: Run podman-group to ensure subuids/subgids
+  script: /opt/podman/podman-group
+  become: yes
+  
 - name: Create alias for podman-group in /etc/bashrc
   lineinfile:
     path: /etc/bashrc
