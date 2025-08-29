@@ -1,6 +1,6 @@
 ---
 - name: Deploy Podman Rootless User Automation for CSS Labs
-  hosts: cssansible_lab
+  hosts: gpu_lab
   become: yes
   tasks:
     - import_tasks: Roles/tasks/main.yml
