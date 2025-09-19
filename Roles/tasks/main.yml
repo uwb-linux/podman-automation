@@ -1,3 +1,5 @@
+---
+# --- Fix Podman installation conflicts first ---
 - name: Reset container-tools module (fix Podman modular filtering on EL8)
   command: dnf module reset -y container-tools
   become: yes
@@ -21,7 +23,7 @@
     state: present
   become: yes
 
-# --- Group and directories ---
+# --- Group and base directory ---
 - name: Ensure css-podman group exists
   group:
     name: css-podman
@@ -36,18 +38,8 @@
     group: root
     mode: '1777'
   become: yes
-  
-- name: Ensure per-user podman-lab directories exist
-  file:
-    path: "{{ podman_basedir }}/{{ item }}/podman-lab"
-    state: directory
-    owner: "{{ item }}"
-    group: "{{ item }}"
-    mode: '0700'
-  loop: "{{ podman_users }}"
-  become: yes
-  
-# --- Users in Podman group ---
+
+# --- Users in podman group ---
 - name: Get members of css-podman group
   command: getent group css-podman
   register: podman_group
@@ -58,8 +50,8 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
-# --- User directories ---
-- name: Create per-user podman-lab directory
+# --- Now per-user directories ---
+- name: Ensure per-user podman-lab directories exist
   file:
     path: "{{ podman_basedir }}/{{ item }}/podman-lab"
     state: directory
@@ -69,13 +61,14 @@
   loop: "{{ podman_users }}"
   become: yes
 
-# --- Symlinks ---
+# --- Symlinks for convenience ---
 - name: Create symlink ~/podman-lab for each user
   file:
     src: "{{ podman_basedir }}/{{ item }}/podman-lab"
     dest: "/home/{{ item }}/podman-lab"
     state: link
     owner: "{{ item }}"
+    force: yes   # ensures link overwrites if broken
   loop: "{{ podman_users }}"
   become: yes
 
