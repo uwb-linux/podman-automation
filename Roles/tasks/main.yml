@@ -76,15 +76,15 @@
   become: yes
 
 # --- Symlinks ---
-- name: Create symlink ~/podman-lab for each user
+- name: Create symlink ~/podman-lab for each user (run as user)
+  become: true
+  become_user: "{{ item }}"
   file:
     src: "{{ podman_basedir }}/{{ item }}/podman-lab"
     dest: "/home/{{ item }}/podman-lab"
     state: link
-    owner: "{{ item }}"
-    force: yes   # overwrite if broken link exists
+    force: yes
   loop: "{{ podman_users }}"
-  become: yes
 
 # --- Ensure subuid/subgid ranges ---
 - name: Ensure subuid ranges for css-podman users
