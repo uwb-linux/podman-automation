@@ -14,7 +14,7 @@
   become: yes
   ignore_errors: yes
 
-- name: Remove containerd.io if present (fix runc conflicts with Podman)
+- name: Remove containerd.io if present (fix runc conflicts with podman)
   dnf:
     name: containerd.io
     state: absent
@@ -27,7 +27,7 @@
     state: present
   become: yes
 
-# --- Group and base directory ---
+# --- Group and base podman directory ---
 - name: Ensure css-podman group exists
   group:
     name: css-podman
@@ -43,7 +43,7 @@
     mode: '1777'
   become: yes
 
-# --- Users in podman group ---
+# --- Get users in css-podman group ---
 - name: Get members of css-podman group
   command: getent group css-podman
   register: podman_group
@@ -54,7 +54,7 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
-# --- Per-user directories ---
+# --- Create per-user base dirs + podman-lab dirs ---
 - name: Ensure per-user podman base directories exist
   file:
     path: "{{ podman_basedir }}/{{ item }}"
@@ -82,7 +82,7 @@
     dest: "/home/{{ item }}/podman-lab"
     state: link
     owner: "{{ item }}"
-    force: yes   # overwrite if broken link already exists
+    force: yes   # overwrite if broken link exists
   loop: "{{ podman_users }}"
   become: yes
 
