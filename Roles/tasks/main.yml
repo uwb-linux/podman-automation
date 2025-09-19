@@ -1,4 +1,8 @@
 ---
+# =====================================================================
+# Podman Rootless Setup for CSS Labs
+# =====================================================================
+
 # --- Fix Podman installation conflicts first ---
 - name: Reset container-tools module (fix Podman modular filtering on EL8)
   command: dnf module reset -y container-tools
@@ -50,7 +54,7 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
-# --- Now per-user directories ---
+# --- User directories ---
 - name: Ensure per-user podman-lab directories exist
   file:
     path: "{{ podman_basedir }}/{{ item }}/podman-lab"
@@ -61,14 +65,14 @@
   loop: "{{ podman_users }}"
   become: yes
 
-# --- Symlinks for convenience ---
+# --- Symlinks ---
 - name: Create symlink ~/podman-lab for each user
   file:
     src: "{{ podman_basedir }}/{{ item }}/podman-lab"
     dest: "/home/{{ item }}/podman-lab"
     state: link
     owner: "{{ item }}"
-    force: yes   # ensures link overwrites if broken
+    force: yes   # overwrite if broken
   loop: "{{ podman_users }}"
   become: yes
 
