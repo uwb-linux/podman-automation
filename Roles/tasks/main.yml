@@ -36,7 +36,17 @@
     group: root
     mode: '1777'
   become: yes
-
+  
+- name: Ensure per-user podman-lab directories exist
+  file:
+    path: "{{ podman_basedir }}/{{ item }}/podman-lab"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: '0700'
+  loop: "{{ podman_users }}"
+  become: yes
+  
 # --- Users in Podman group ---
 - name: Get members of css-podman group
   command: getent group css-podman
