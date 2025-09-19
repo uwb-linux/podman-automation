@@ -1,9 +1,22 @@
+- name: Reset podman module (fix modular filtering issues on EL8)
+  command: dnf module reset -y podman
+  become: yes
+  ignore_errors: yes
+
+- name: Remove containerd.io if present (fix runc conflicts with podman)
+  dnf:
+    name: containerd.io
+    state: absent
+  become: yes
+  ignore_errors: yes
+
 - name: Ensure Podman is installed
   dnf:
     name: podman
     state: present
   become: yes
 
+# --- Group and directories ---
 - name: Ensure css-podman group exists
   group:
     name: css-podman
@@ -19,6 +32,7 @@
     mode: '1777'
   become: yes
 
+# --- Users in Podman group ---
 - name: Get members of css-podman group
   command: getent group css-podman
   register: podman_group
@@ -29,6 +43,7 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
+# --- User directories ---
 - name: Create per-user podman-lab directory
   file:
     path: "{{ podman_basedir }}/{{ item }}/podman-lab"
@@ -39,6 +54,7 @@
   loop: "{{ podman_users }}"
   become: yes
 
+# --- Symlinks ---
 - name: Create symlink ~/podman-lab for each user
   file:
     src: "{{ podman_basedir }}/{{ item }}/podman-lab"
@@ -48,6 +64,7 @@
   loop: "{{ podman_users }}"
   become: yes
 
+# --- Ensure subuid/subgid ranges ---
 - name: Ensure subuid ranges for css-podman users
   lineinfile:
     path: /etc/subuid
