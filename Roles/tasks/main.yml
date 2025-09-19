@@ -1,5 +1,10 @@
-- name: Reset podman module (fix modular filtering issues on EL8)
-  command: dnf module reset -y podman
+- name: Reset container-tools module (fix Podman modular filtering on EL8)
+  command: dnf module reset -y container-tools
+  become: yes
+  ignore_errors: yes
+
+- name: Enable container-tools module (get latest Podman in EL8)
+  command: dnf module enable -y container-tools
   become: yes
   ignore_errors: yes
 
