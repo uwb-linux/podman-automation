@@ -1,71 +1,44 @@
----
-# =====================================================================
-# Podman Rootless Setup for CSS Labs
-# =====================================================================
+  state: present
+  become: yes
 
-# --- Fix Podman installation conflicts first ---
-- name: Reset container-tools module (fix Podman modular filtering on EL8)
-  command: dnf module reset -y container-tools
+- name: Set SELinux to permissive NOW (immediate, until reboot)
+  command: setenforce 0
   become: yes
   ignore_errors: yes
 
-- name: Enable container-tools module (get latest Podman in EL8)
-  command: dnf module enable -y container-tools
-  become: yes
-  ignore_errors: yes
-
-- name: Remove containerd.io if present (fix runc conflicts with podman)
-  dnf:
-    name: containerd.io
-    state: absent
-  become: yes
-  ignore_errors: yes
-
-- name: Ensure Podman is installed
-  dnf:
-    name: podman
-    state: present
-  become: yes
-
-# --- Group and base podman directory ---
+- name: Make SELinux permissive permanently in /etc/selinux/config
+  replace:
+    path: /etc/selinux/config
+    regexp: '^SELINUX=.*'
+    replace: 'SELINUX=permissive'
 - name: Ensure css-podman group exists
   group:
     name: css-podman
     state: present
   become: yes
 
+- name: Create /opt/podman directory
 - name: Ensure Podman base directory exists (on /data or /scratch depending on lab)
   file:
+    path: /opt/podman
     path: "{{ podman_basedir }}"
     state: directory
     owner: root
     group: root
+    mode: '0755'
+  become: yes
+
+- name: Setup Podman Users, Directories, and Group
+  import_tasks: setup-podman-users.yml
     mode: '1777'
   become: yes
 
-# --- Get users in css-podman group ---
 - name: Get members of css-podman group
-  command: getent group css-podman
-  register: podman_group
-  changed_when: false
-  become: yes
-
-- name: Extract css-podman users
+@@ -39,14 +29,31 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
-# --- Create per-user base dirs + podman-lab dirs ---
-- name: Ensure per-user podman base directories exist
-  file:
-    path: "{{ podman_basedir }}/{{ item }}"
-    state: directory
-    owner: "{{ item }}"
-    group: "{{ item }}"
-    mode: '0700'
-  loop: "{{ podman_users }}"
-  become: yes
-
-- name: Ensure per-user podman-lab subdirectories exist
+- name: Create per-user podman-lab directory
   file:
     path: "{{ podman_basedir }}/{{ item }}/podman-lab"
     state: directory
@@ -75,30 +48,30 @@
   loop: "{{ podman_users }}"
   become: yes
 
-# --- Symlinks ---
-- name: Create symlink ~/podman-lab for each user (run as user)
-  become: true
-  become_user: "{{ item }}"
+- name: Create symlink ~/podman-lab for each user
   file:
     src: "{{ podman_basedir }}/{{ item }}/podman-lab"
     dest: "/home/{{ item }}/podman-lab"
     state: link
-    force: yes
+    owner: "{{ item }}"
   loop: "{{ podman_users }}"
+  become: yes
 
-# --- Ensure subuid/subgid ranges ---
 - name: Ensure subuid ranges for css-podman users
   lineinfile:
     path: /etc/subuid
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
   become: yes
 
 - name: Ensure subgid ranges for css-podman users
-  lineinfile:
-    path: /etc/subgid
+@@ -55,6 +62,4 @@
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
   become: yes
