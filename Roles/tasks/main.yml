@@ -43,9 +43,10 @@
   lineinfile:
     path: /etc/subuid
     regexp: "^{{ item }}:"
-    line: "{{ item }}:{{ 100000 + (idx * 65536) }}:65536"
+    line: "{{ item }}:{{ 100000 + (index * 65536) }}:65536"
   loop: "{{ podman_users }}"
   loop_control:
+    index_var: index
     label: "{{ item }}"
   become: yes
 
@@ -53,8 +54,9 @@
   lineinfile:
     path: /etc/subgid
     regexp: "^{{ item }}:"
-    line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
+    line: "{{ item }}:{{ 100000 + (index * 65536) }}:65536"
   loop: "{{ podman_users }}"
   loop_control:
+    index_var: index
     label: "{{ item }}"
   become: yes
