@@ -1,40 +1,31 @@
-  state: present
+- name: Ensure Podman is installed
+  dnf:
+    name: podman
+    state: present
   become: yes
 
-- name: Set SELinux to permissive NOW (immediate, until reboot)
-  command: setenforce 0
-  become: yes
-  ignore_errors: yes
-
-- name: Make SELinux permissive permanently in /etc/selinux/config
-  replace:
-    path: /etc/selinux/config
-    regexp: '^SELINUX=.*'
-    replace: 'SELINUX=permissive'
 - name: Ensure css-podman group exists
   group:
     name: css-podman
     state: present
   become: yes
 
-- name: Create /opt/podman directory
 - name: Ensure Podman base directory exists (on /data or /scratch depending on lab)
   file:
-    path: /opt/podman
     path: "{{ podman_basedir }}"
     state: directory
     owner: root
     group: root
-    mode: '0755'
-  become: yes
-
-- name: Setup Podman Users, Directories, and Group
-  import_tasks: setup-podman-users.yml
     mode: '1777'
   become: yes
 
 - name: Get members of css-podman group
-@@ -39,14 +29,31 @@
+  command: getent group css-podman
+  register: podman_group
+  changed_when: false
+  become: yes
+
+- name: Extract css-podman users
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
@@ -63,15 +54,12 @@
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
-  loop_control:
-    label: "{{ item }}"
   become: yes
 
 - name: Ensure subgid ranges for css-podman users
-@@ -55,6 +62,4 @@
+  lineinfile:
+    path: /etc/subgid
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
-  loop_control:
-    label: "{{ item }}"
   become: yes
