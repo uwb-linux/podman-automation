@@ -4,19 +4,29 @@
     state: present
   become: yes
 
-- name: Ensure css-podman group exists
-  group:
-    name: css-podman
-    state: present
+- name: Set SELinux to permissive NOW (immediate, until reboot)
+  command: setenforce 0
+  become: yes
+  ignore_errors: yes
+
+- name: Make SELinux permissive permanently in /etc/selinux/config
+  replace:
+    path: /etc/selinux/config
+    regexp: '^SELINUX=.*'
+    replace: 'SELINUX=permissive'
   become: yes
 
-- name: Ensure Podman base directory exists (on /data or /scratch depending on lab)
+- name: Create /opt/podman directory
   file:
-    path: "{{ podman_basedir }}"
+    path: /opt/podman
     state: directory
     owner: root
     group: root
-    mode: '1777'
+    mode: '0755'
+  become: yes
+
+- name: Setup Podman Users, Directories, and Group
+  import_tasks: setup-podman-users.yml
   become: yes
 
 - name: Get members of css-podman group
@@ -29,31 +39,14 @@
   set_fact:
     podman_users: "{{ podman_group.stdout.split(':')[-1].split(',') | reject('equalto', '') | list }}"
 
-- name: Create per-user podman-lab directory
-  file:
-    path: "{{ podman_basedir }}/{{ item }}/podman-lab"
-    state: directory
-    owner: "{{ item }}"
-    group: "{{ item }}"
-    mode: '0700'
-  loop: "{{ podman_users }}"
-  become: yes
-
-- name: Create symlink ~/podman-lab for each user
-  file:
-    src: "{{ podman_basedir }}/{{ item }}/podman-lab"
-    dest: "/home/{{ item }}/podman-lab"
-    state: link
-    owner: "{{ item }}"
-  loop: "{{ podman_users }}"
-  become: yes
-
 - name: Ensure subuid ranges for css-podman users
   lineinfile:
     path: /etc/subuid
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
   become: yes
 
 - name: Ensure subgid ranges for css-podman users
@@ -62,4 +55,6 @@
     regexp: "^{{ item }}:"
     line: "{{ item }}:{{ 100000 + (loop.index0 * 65536) }}:65536"
   loop: "{{ podman_users }}"
+  loop_control:
+    label: "{{ item }}"
   become: yes
